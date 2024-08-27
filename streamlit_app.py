@@ -8,7 +8,6 @@ st.sidebar.info(
     - Web App URL: <https://app-geo-timelapse.streamlit.app>
     - GitHub repository: <https://github.com/Glo9062/streamlit-geospatial> 
     - Forked from: <https://github.com/giswqs/streamlit-geospatial>
-    - 
     """
 )
 
