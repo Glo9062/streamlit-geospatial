@@ -11,16 +11,20 @@ import geemap.colormaps as cm
 import geemap.foliumap as geemap
 from datetime import date
 from shapely.geometry import Polygon
+import base64
 
 st.set_page_config(layout="wide")
 warnings.filterwarnings("ignore")
 
-
+gee_key = base64.b64decode(st.secrets["gee_key"])
+with open('.private-key.json', 'wb') as file:
+    file.write(decoded_bytes)
+    
 @st.cache_data
-def ee_authenticate(token_name=st.secrets["gee_token"]):
-    # geemap.ee_initialize(token_name=token_name)
-    ee.Authenticate()
-    ee.Initialize(project=token_name)
+def ee_authenticate():
+    credentials = ee.ServiceAccountCredentials(st.secrets["gee_service_name"], '.private-key.json')
+    ee.Initialize(credentials)
+
 
 
 st.sidebar.info(
@@ -254,7 +258,7 @@ def app():
     st.session_state["vis_params"] = None
 
     with row1_col1:
-        ee_authenticate(token_name=st.secrets["gee_token"])
+        ee_authenticate()
         m = geemap.Map(
             basemap="HYBRID",
             plugin_Draw=True,
