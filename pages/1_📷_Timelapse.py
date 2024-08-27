@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore")
 
 gee_key = base64.b64decode(st.secrets["gee_key"])
 with open('.private-key.json', 'wb') as file:
-    file.write(decoded_bytes)
+    file.write(gee_key)
     
 @st.cache_data
 def ee_authenticate():
