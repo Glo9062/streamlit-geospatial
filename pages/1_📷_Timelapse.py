@@ -18,7 +18,9 @@ warnings.filterwarnings("ignore")
 
 @st.cache_data
 def ee_authenticate(token_name=st.secrets["gee_token"]):
-    geemap.ee_initialize(token_name=token_name)
+    # geemap.ee_initialize(token_name=token_name)
+    ee.Authenticate()
+    ee.Initialize(project=token_name)
 
 
 st.sidebar.info(
