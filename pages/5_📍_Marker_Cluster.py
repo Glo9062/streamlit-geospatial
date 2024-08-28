@@ -5,17 +5,12 @@ st.set_page_config(layout="wide")
 
 st.sidebar.info(
     """
-    - Web App URL: <https://streamlit.gishub.org>
-    - GitHub repository: <https://github.com/giswqs/streamlit-geospatial>
+    - Web App URL: <https://app-geo-timelapse.streamlit.app>
+    - GitHub repository: <https://github.com/Glo9062/streamlit-geospatial> 
+    - Forked from: <https://github.com/giswqs/streamlit-geospatial>
     """
 )
 
-st.sidebar.title("Contact")
-st.sidebar.info(
-    """
-    Qiusheng Wu at [wetlands.io](https://wetlands.io) | [GitHub](https://github.com/giswqs) | [Twitter](https://twitter.com/giswqs) | [YouTube](https://youtube.com/@giswqs) | [LinkedIn](https://www.linkedin.com/in/giswqs)
-    """
-)
 
 st.title("Marker Cluster")
 
