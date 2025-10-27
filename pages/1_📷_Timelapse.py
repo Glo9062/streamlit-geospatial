@@ -13,27 +13,52 @@ from datetime import date
 from shapely.geometry import Polygon
 import base64
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 warnings.filterwarnings("ignore")
 
-gee_key = base64.b64decode(st.secrets["gee_key"])
-with open('.private-key.json', 'wb') as file:
-    file.write(gee_key)
-    
-@st.cache_data
 def ee_authenticate():
-    credentials = ee.ServiceAccountCredentials(st.secrets["gee_service_name"], '.private-key.json')
-    ee.Initialize(credentials)
-
-
-
-st.sidebar.info(
+    """Initialize Earth Engine with persistent authentication
+    
+    Supports two authentication methods:
+    1. Service Account (for Streamlit Cloud deployment)
+    2. Local authentication (for local development)
     """
-    - Web App URL: <https://app-geo-timelapse.streamlit.app>
-    - GitHub repository: <https://github.com/Glo9062/streamlit-geospatial> 
-    - Forked from: <https://github.com/giswqs/streamlit-geospatial>
-    """
-)
+    # Check if already initialized
+    try:
+        ee.Initialize()
+        return
+    except Exception:
+        pass
+    
+    # Method 1: Try Service Account from Streamlit Secrets (for deployment)
+    if "gee_service_account" in st.secrets:
+        try:
+            service_account = st.secrets["gee_service_account"]
+            credentials = ee.ServiceAccountCredentials(
+                service_account, key_data=st.secrets["gee_key_data"]
+            )
+            ee.Initialize(credentials)
+            return
+        except Exception as e:
+            st.warning(f"Service account authentication failed: {str(e)}")
+    
+    # Method 2: Try local authentication
+    try:
+        geemap.ee_initialize()
+    except Exception as e:
+        st.error("⚠️ Google Earth Engine authentication required")
+        st.info("""
+        **For local development:**
+        Run `earthengine authenticate` in your terminal.
+        
+        **For Streamlit Cloud deployment:**
+        Add your GEE service account credentials to Streamlit Secrets.
+        """)
+        st.stop()
+
+
+
+# Sidebar hidden for single-page app
 goes_rois = {
     "Creek Fire, CA (2020-09-05)": {
         "region": Polygon(
@@ -347,8 +372,9 @@ def app():
                     try:
                         col = ee.ImageCollection.load(asset_id)
                         st.session_state["ee_asset_id"] = asset_id
-                    except:
+                    except Exception as e:
                         st.error("Invalid Earth Engine asset ID.")
+                        st.error(f"Error details: {str(e)}")
                         st.session_state["ee_asset_id"] = None
                         return
 
@@ -812,13 +838,14 @@ def app():
                                     progress_bar_color=progress_bar_color,
                                     progress_bar_height=5,
                                     loop=0,
-                                    mp4=mp4,
-                                    fading=fading,
-                                )
-                        except:
+                                mp4=mp4,
+                                fading=fading,
+                            )
+                        except Exception as e:
                             empty_text.error(
                                 "An error occurred while computing the timelapse. Your probably requested too much data. Try reducing the ROI or timespan."
                             )
+                            st.error(f"Error details: {str(e)}")
                             st.stop()
 
                         if out_gif is not None and os.path.exists(out_gif):
@@ -1207,23 +1234,25 @@ def app():
                                 mp4=mp4,
                                 fading=fading,
                             )
-                        except:
+                        except Exception as e:
                             empty_text.error(
                                 "An error occurred while computing the timelapse. You probably requested too much data. Try reducing the ROI or timespan."
                             )
+                            st.error(f"Error details: {str(e)}")
+                            st.stop()
 
                         empty_text.text(
                             "Right click the GIF to save it to your computer👇"
                         )
                         empty_image.image(out_gif)
 
-                        out_mp4 = out_gif.replace(".gif", ".mp4")
-                        if mp4 and os.path.exists(out_mp4):
-                            with empty_video:
-                                st.text(
-                                    "Right click the MP4 to save it to your computer👇"
-                                )
-                                st.video(out_gif.replace(".gif", ".mp4"))
+                    out_mp4 = out_gif.replace(".gif", ".mp4")
+                    if mp4 and os.path.exists(out_mp4):
+                        with empty_video:
+                            st.text(
+                                "Right click the MP4 to save it to your computer👇"
+                            )
+                            st.video(out_gif.replace(".gif", ".mp4"))
 
         elif collection in [
             "MODIS Gap filled Land Surface Temperature Daily",
@@ -1386,10 +1415,12 @@ def app():
                                     mp4=mp4,
                                     fading=fading,
                                 )
-                        except:
+                        except Exception as e:
                             empty_text.error(
                                 "Something went wrong. You probably requested too much data. Try reducing the ROI or timespan."
                             )
+                            st.error(f"Error details: {str(e)}")
+                            st.stop()
 
                         if out_gif is not None and os.path.exists(out_gif):
 
@@ -1501,10 +1532,12 @@ def app():
                                 mp4=mp4,
                                 fading=fading,
                             )
-                        except:
+                        except Exception as e:
                             empty_text.error(
                                 "Something went wrong. You either requested too much data or the ROI is outside the U.S."
                             )
+                            st.error(f"Error details: {str(e)}")
+                            st.stop()
 
                         if out_gif is not None and os.path.exists(out_gif):
 
@@ -1530,4 +1563,6 @@ def app():
 try:
     app()
 except Exception as e:
-    pass
+    st.error(f"An error occurred: {str(e)}")
+    import traceback
+    st.error(traceback.format_exc())
