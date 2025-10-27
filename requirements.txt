@@ -4,4 +4,5 @@ geopandas
 fiona
 streamlit-folium
 ipython
+ffmpeg-python
 

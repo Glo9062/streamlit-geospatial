@@ -16,8 +16,9 @@ import base64
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 warnings.filterwarnings("ignore")
 
+@st.cache_resource
 def ee_authenticate():
-    """Initialize Earth Engine with persistent authentication
+    """Initialize Earth Engine with persistent authentication (cached)
     
     Supports two authentication methods:
     1. Service Account (for Streamlit Cloud deployment)
@@ -26,7 +27,7 @@ def ee_authenticate():
     # Check if already initialized
     try:
         ee.Initialize()
-        return
+        return True
     except Exception:
         pass
     
@@ -38,13 +39,14 @@ def ee_authenticate():
                 service_account, key_data=st.secrets["gee_key_data"]
             )
             ee.Initialize(credentials)
-            return
+            return True
         except Exception as e:
             st.warning(f"Service account authentication failed: {str(e)}")
     
     # Method 2: Try local authentication
     try:
         geemap.ee_initialize()
+        return True
     except Exception as e:
         st.error("⚠️ Google Earth Engine authentication required")
         st.info("""
@@ -55,6 +57,27 @@ def ee_authenticate():
         Add your GEE service account credentials to Streamlit Secrets.
         """)
         st.stop()
+    return False
+
+@st.cache_data
+def geocode_location(keyword):
+    """Cache geocoding results"""
+    return geemap.geocode(keyword)
+
+@st.cache_data
+def search_ee_datasets(keyword):
+    """Cache Earth Engine dataset search results"""
+    assets = geemap.search_ee_data(keyword)
+    ee_assets = []
+    for asset in assets:
+        if asset["ee_id_snippet"].startswith("ee.ImageCollection"):
+            ee_assets.append(asset)
+    return ee_assets
+
+@st.cache_data
+def get_ee_dataset_html(asset_data):
+    """Cache dataset HTML generation"""
+    return geemap.ee_data_html(asset_data)
 
 
 
@@ -267,15 +290,20 @@ def app():
 
     row1_col1, row1_col2 = st.columns([2, 1])
 
-    if st.session_state.get("zoom_level") is None:
+    # Initialize session state variables only once
+    if "zoom_level" not in st.session_state:
         st.session_state["zoom_level"] = 4
-
-    st.session_state["ee_asset_id"] = None
-    st.session_state["bands"] = None
-    st.session_state["palette"] = None
-    st.session_state["vis_params"] = None
+    if "ee_asset_id" not in st.session_state:
+        st.session_state["ee_asset_id"] = None
+    if "bands" not in st.session_state:
+        st.session_state["bands"] = None
+    if "palette" not in st.session_state:
+        st.session_state["palette"] = None
+    if "vis_params" not in st.session_state:
+        st.session_state["vis_params"] = None
 
     with row1_col1:
+        # Initialize Earth Engine once (cached)
         ee_authenticate()
         m = geemap.Map(
             basemap="HYBRID",
@@ -290,7 +318,8 @@ def app():
 
         keyword = st.text_input("Search for a location:", "")
         if keyword:
-            locations = geemap.geocode(keyword)
+            # Use cached geocoding
+            locations = geocode_location(keyword)
             if locations is not None and len(locations) > 0:
                 str_locations = [str(g)[1:-1] for g in locations]
                 location = st.selectbox("Select a location:", str_locations)
@@ -338,12 +367,8 @@ def app():
         if collection == "Any Earth Engine ImageCollection":
             keyword = st.text_input("Enter a keyword to search (e.g., MODIS):", "")
             if keyword:
-
-                assets = geemap.search_ee_data(keyword)
-                ee_assets = []
-                for asset in assets:
-                    if asset["ee_id_snippet"].startswith("ee.ImageCollection"):
-                        ee_assets.append(asset)
+                # Use cached search results
+                ee_assets = search_ee_datasets(keyword)
 
                 asset_titles = [x["title"] for x in ee_assets]
                 dataset = st.selectbox("Select a dataset:", asset_titles)
@@ -358,7 +383,8 @@ def app():
                 if dataset is not None:
                     with st.expander("Show dataset details", False):
                         index = asset_titles.index(dataset)
-                        html = geemap.ee_data_html(st.session_state["ee_assets"][index])
+                        # Use cached HTML generation
+                        html = get_ee_dataset_html(st.session_state["ee_assets"][index])
                         st.markdown(html, True)
             # elif collection == "MODIS Gap filled Land Surface Temperature Daily":
             #     ee_id = ""
