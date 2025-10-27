@@ -1,9 +1,4 @@
 ffmpeg
-gifsicle
 build-essential
 python3-dev
-gdal-bin
-libgdal-dev
-libproj-dev
-libgeos-dev
-proj-bin
+
